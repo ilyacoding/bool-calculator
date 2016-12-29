@@ -1,0 +1,68 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = #1050#1072#1083#1100#1082#1091#1083#1103#1090#1086#1088' '#1073#1091#1083#1077#1074#1099#1093' '#1092#1091#1085#1082#1094#1080#1081
+  ClientHeight = 462
+  ClientWidth = 689
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  PixelsPerInch = 96
+  TextHeight = 13
+  object LabeledEditFunc: TLabeledEdit
+    Left = 104
+    Top = 40
+    Width = 249
+    Height = 21
+    EditLabel.Width = 62
+    EditLabel.Height = 13
+    EditLabel.Caption = 'Bool function'
+    TabOrder = 0
+    Text = 'A*~B+~C*D'
+  end
+  object ButtonCalc: TButton
+    Left = 192
+    Top = 67
+    Width = 75
+    Height = 25
+    Caption = 'Let'#39's Go!'
+    TabOrder = 1
+    OnClick = ButtonCalcClick
+  end
+  object Memo1: TMemo
+    Left = 8
+    Top = 98
+    Width = 169
+    Height = 356
+    TabOrder = 2
+  end
+  object StringGrid1: TStringGrid
+    Left = 183
+    Top = 98
+    Width = 498
+    Height = 356
+    RowCount = 10
+    TabOrder = 3
+    ColWidths = (
+      64
+      64
+      64
+      64
+      64)
+    RowHeights = (
+      24
+      24
+      24
+      24
+      24
+      24
+      24
+      24
+      24
+      24)
+  end
+end

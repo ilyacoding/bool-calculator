@@ -1,0 +1,257 @@
+//---------------------------------------------------------------------------
+
+#include <vcl.h>
+#pragma hdrstop
+
+#include "iostream"
+//#include "fstream"
+#include "string"
+#include "vector"
+#include <algorithm>
+#include <functional>
+#include <sstream>
+#include <cctype>
+#include <locale>
+#include <iostream>
+#include <iomanip>
+#include "boost/algorithm/string.hpp"
+using namespace std;
+
+#include "Unit1.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TForm1 *Form1;
+
+string UnicodeToString(UnicodeString us) {
+	string result = AnsiString(us.t_str()).c_str();
+	return result;
+}
+
+template <typename T>
+string ToStr(T Data)
+{
+	 ostringstream ss;
+	 ss << Data;
+	 return ss.str();
+}
+
+enum Lexem {
+	ID, PLUS, MUL, INVERSE
+};
+
+class Token {
+public:
+	Token(string ss, Lexem lx) : str(ss), lex(lx) {inverse = false;}
+	Token(Lexem lx) : lex(lx) {str = ""; inverse = false;}
+	string str;
+	Lexem lex;
+	bool inverse;
+};
+
+class IDD {
+public:
+	IDD(string s, bool v) : id(s), value(v) {}
+	string id;
+	bool value;
+};
+
+vector<vector<Token> > func;
+
+vector<Token> tokens;
+
+vector<string> GetStrLexems(string str)
+{
+	string buf = "";
+	boost::algorithm::trim(str);
+	vector<string> lexems;
+	for (int j = 0; j < str.length(); j++)
+	{
+		while ((isalpha(str[j]) || isdigit(str[j])) && str[j] != '+' && str[j] != '*' && (j < str.length())) buf += str[j++];
+		if (buf.length() > 0) {
+			boost::algorithm::trim(buf);
+			lexems.push_back(buf);
+			buf = "";
+		}
+		if (str[j] == '~') {
+			lexems.push_back("~");
+			j++;
+		}
+		while ((!isspace(str[j]) && !isalpha(str[j]) && !isdigit(str[j])) && str[j] != '~' && (j < str.length())) buf += str[j++];
+		if (buf.length() > 0) {
+			boost::algorithm::trim(buf);
+			lexems.push_back(buf);
+			buf = "";
+		}
+		if (str[j] == '~') {
+			lexems.push_back("~");
+			j++;
+		}
+		if (isalpha(str[j]) || isdigit(str[j])) j--;
+	}
+	return lexems;
+}
+
+string TokenToStr(Lexem lex)
+{
+	switch (lex)
+	{
+	case ID:
+		return "ID";
+		break;
+	case PLUS:
+		return "PLUS";
+		break;
+	case MUL:
+		return "MUL";
+		break;
+	case INVERSE:
+		return "INVERSE";
+		break;
+	default:
+		return "";
+		break;
+	}
+}
+
+bool isValidVar(string str)
+{
+	if (!isalpha(str[0]) && (str[0] != '_')) return false;
+	for (int i = 0; i < str.length(); i++)
+	{
+		if (!isalnum(str[i]) && (str[0] != '_')) return false;
+	}
+	return true;
+}
+
+bool ParseTokens(vector<string> lex)
+{
+	tokens.clear();
+	for (int i = 0; i < lex.size(); i++)
+	{
+		if (lex[i] == "+")
+			tokens.push_back(Token(lex[i], PLUS));
+		else if (lex[i] == "*")
+			tokens.push_back(Token(lex[i], MUL));
+		else if (lex[i] == "~")
+			tokens.push_back(Token(lex[i], INVERSE));
+		else if (isValidVar(lex[i]))
+			tokens.push_back(Token(lex[i], ID));
+		else {
+			return false;
+		}
+	}
+
+	for (int i = 0; i < tokens.size(); i++)
+	{
+		if (tokens[i].lex == INVERSE)
+		{
+			if (i + 1 < tokens.size())
+			{
+				if (tokens[i + 1].lex == ID)
+				{
+					tokens[i + 1].inverse = true;
+					tokens.erase(tokens.begin() + i);
+				} else {
+					return false;
+                }
+			} else {
+				return false;
+            }
+        }
+    }
+
+	return true;
+}
+
+void ParseFunc() {
+	func.clear();
+	vector<Token> el;
+	for (int i = 0; i < tokens.size(); i++)
+	{
+		while (tokens[i].lex != PLUS && i < tokens.size())
+		if (tokens[i].lex != MUL)
+			el.push_back(tokens[i++]);
+		else
+			i++;
+		func.push_back(el);
+		el.clear();
+	}
+}
+
+bool GetValue(vector<vector<Token> > func, vector<IDD> val)
+{
+
+}
+
+vector<IDD> GetIDD(vector<vector<Token> > func)
+{
+	vector<IDD> v;
+	for (int i = 0; i < func.size(); i++)
+	{
+		for (int j = 0; j < func[i].size(); j++)
+		{
+			bool added = false;
+			for (int k = 0; k < v.size(); k++)
+				if (v[k].id == func[i][j].str)
+					added = true;
+			if (!added)
+			{
+				v.push_back(IDD(func[i][j].str, false));
+			}
+        }
+	}
+	return v;
+}
+
+//---------------------------------------------------------------------------
+__fastcall TForm1::TForm1(TComponent* Owner)
+	: TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
+{
+ 	string s = UnicodeToString(LabeledEditFunc->Text);
+	vector<string> x = GetStrLexems(s);
+	if (!ParseTokens(x))
+	{
+		Memo1->Lines->Add("Parse error.");
+		return;
+	}
+	ParseFunc();
+	for (int i = 0; i < tokens.size(); i++)
+	{
+		Memo1->Lines->Add("-> Token: ");
+		Memo1->Lines->Add((TokenToStr(tokens[i].lex)).c_str());
+		Memo1->Lines->Add((tokens[i].str).c_str());
+		if (tokens[i].inverse)
+			Memo1->Lines->Add("-> ID inversed");
+		Memo1->Lines->Add("");
+	}
+	Memo1->Lines->Add(">>>>>");
+	Memo1->Lines->Add("");
+
+	for (int i = 0; i < func.size(); i++)
+	{
+		for (int j = 0; j < func[i].size(); j++)
+		{
+			Memo1->Lines->Add(func[i][j].str.c_str());
+		}
+	}
+
+	Memo1->Lines->Add("");
+	Memo1->Lines->Add(">>>>>");
+	Memo1->Lines->Add("");
+
+	vector<IDD> val = GetIDD(func);
+
+	for (int i = 0; i < val.size(); i++)
+	{
+		Memo1->Lines->Add(val[i].id.c_str());
+	}
+
+
+}
+//---------------------------------------------------------------------------
+
