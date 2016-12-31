@@ -197,8 +197,8 @@ string Menterm::FPlusstr(vector<IDD> vars)
 			s += vars[i].id;
 		else if (v[i] == 0)
 			s += "~" + vars[i].id;
-		//if (i < v.size() - 1 && v[i+1] != -1 && v[i] != -1)
-		//	s += "*";
+		if (i < v.size() - 1)
+			s += "+";
 	}
 
 	return s;
@@ -696,7 +696,6 @@ __fastcall TForm1::TForm1(TComponent* Owner)
 	: TForm(Owner)
 {
 }
-
 //---------------------------------------------------------------------------
 void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 {
@@ -704,15 +703,10 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	vector<Menterm> SDNF;
 
 	Memo1->Clear();
-	Memo2->Clear();
 	table.clear();
 	table_glue.g.clear();
 
-	string str = UnicodeToString(LabeledEditFunc->Text);
-
-	str.erase(std::remove(str.begin(), str.end(), ' '), str.end());
-
-	if (!ParseTokens(GetStrLexems(str), tokens))
+	if (!ParseTokens(GetStrLexems(UnicodeToString(LabeledEditFunc->Text)), tokens))
 	{
 		Memo1->Lines->Add("Parse error.");
 		return;
@@ -779,7 +773,8 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		Memo1->Lines->Add(SMenterms[i].str().c_str());
 	}
 
-	Memo2->Lines->Add("Answer (Implicants)");
+	Memo1->Lines->Add("");
+	Memo1->Lines->Add("Answer");
 	vector<vector<Menterm> > result = GetMentermResult(MSets, simple);
 	for (int i = 0; i < result.size(); i++)
 	{
@@ -787,23 +782,9 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		for (int j = 0; j < result[i].size(); j++)
 		{
 			s += result[i][j].str();
-			if (j < result[i].size() - 1) s += " | ";
-		}
-		Memo2->Lines->Add(s.c_str());
-		s = "";
-	}
-
-	Memo2->Lines->Add("");
-	Memo2->Lines->Add("Answer (Minimized function)");
-	for (int i = 0; i < result.size(); i++)
-	{
-		string s;
-		for (int j = 0; j < result[i].size(); j++)
-		{
-			s += result[i][j].FPlusstr(GetIDD(func));
 			if (j < result[i].size() - 1) s += " + ";
 		}
-		Memo2->Lines->Add(s.c_str());
+		Memo1->Lines->Add(s.c_str());
 		s = "";
 	}
 }

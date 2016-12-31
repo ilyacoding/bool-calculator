@@ -16,6 +16,13 @@ object Form1: TForm1
     488)
   PixelsPerInch = 96
   TextHeight = 13
+  object Label1: TLabel
+    Left = 448
+    Top = 367
+    Width = 30
+    Height = 13
+    Caption = 'Result'
+  end
   object LabeledEditFunc: TLabeledEdit
     Left = 8
     Top = 24
@@ -41,7 +48,7 @@ object Form1: TForm1
     Left = 256
     Top = 51
     Width = 425
-    Height = 429
+    Height = 310
     ScrollBars = ssVertical
     TabOrder = 2
   end
@@ -57,7 +64,18 @@ object Form1: TForm1
     RowCount = 1
     FixedRows = 0
     TabOrder = 3
+    ColWidths = (
+      94
+      94)
     RowHeights = (
       20)
+  end
+  object Memo2: TMemo
+    Left = 256
+    Top = 386
+    Width = 425
+    Height = 94
+    ScrollBars = ssVertical
+    TabOrder = 4
   end
 end
