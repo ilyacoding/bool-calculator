@@ -24,7 +24,40 @@ using namespace std;
 #pragma package(smart_init)
 #pragma resource "*.dfm"
 TForm1 *Form1;
+int table_amount;
 
+void comb(int m, int n, unsigned __int32 *c, vector<vector<int> > & res)
+{
+	int i;
+	vector<int> v;
+	for (i = 0; i < n; i++) c[i] = n - i;
+
+	while (1) {
+		v.clear();
+		for (i = n; i--;)
+			v.push_back(c[i] - 1);
+		res.push_back(v);
+			//printf("%d%c", c[i], i ? ' ' : '\n');
+
+		/* this check is not strictly necessary, but if m is not close to n,
+		it makes the whole thing quite a bit faster */
+		//if (c[i]++ < m) continue;
+
+		for (i = 0; c[i] >= m - i;) if (++i >= n) return;
+		for (c[i]++; i; i--) c[i - 1] = c[i] + 1;
+	}
+}
+
+vector<vector<int> > GetSets(int n)
+{
+	vector<vector<int> > res;
+	unsigned __int32 buf[1000];
+	for (int i = 1; i <= n; i++)
+	{
+		comb(n, i, buf, res);
+	}
+	return res;
+}
 
 string UnicodeToString(UnicodeString us) {
 	string result = AnsiString(us.t_str()).c_str();
@@ -78,12 +111,47 @@ public:
 	Menterm(vector<int> vv)
 	{
 		v = vv;
-    }
+	}
+	Menterm() { }
 	int size();
 	string str();
 	string Fstr(vector<IDD> vars);
+	string FPlusstr(vector<IDD> vars);
 	int count();
+	bool used;
 };
+
+class Table {
+public:
+	vector<vector<vector<Menterm> > > g;
+	void AddTable()
+	{
+		vector<vector<Menterm> > x;
+		g.push_back(x);
+	}
+	void AddGroup(int n)
+	{
+		vector<Menterm> x;
+		g[n].push_back(x);
+	}
+	void FillTable(int table_no, vector<Menterm> v)
+	{
+		for (int i = 0; i < table_amount + 1; i++)
+			this->AddGroup(table_no);
+
+		for (int i = 0; i < this->g[table_no].size(); i++)
+		{
+			for (int j = 0; j < v.size(); j++)
+			{
+				if (i == v[j].count())
+				{
+					v[j].used = false;
+					this->g[table_no][i].push_back(v[j]);
+				}
+			}
+		}
+	}
+} table_glue;
 
 string Menterm::str()
 {
@@ -120,18 +188,31 @@ string Menterm::Fstr(vector<IDD> vars)
 	return s;
 }
 
+string Menterm::FPlusstr(vector<IDD> vars)
+{
+	string s = "";
+	for (int i = 0; i < v.size(); i++)
+	{
+		if (v[i] == 1)
+			s += vars[i].id;
+		else if (v[i] == 0)
+			s += "~" + vars[i].id;
+		if (i < v.size() - 1)
+			s += "+";
+	}
+
+	return s;
+}
+
 int Menterm::size()
 {
 	return v.size();
 }
 
-vector<vector<Token> > func;
-vector<Token> tokens;
-vector<int> table;
-int table_amount;
 
-vector<Menterm> SDNF;
-vector<vector<Menterm> > Group;
+vector<int> table;
+
+vector<vector<vector<Menterm> > > g;
 
 vector<string> GetStrLexems(string str)
 {
@@ -204,7 +285,7 @@ bool isValidVar(string str)
 	return true;
 }
 
-bool ParseTokens(vector<string> lex)
+bool ParseTokens(vector<string> lex, vector<Token> & tokens)
 {
 	tokens.clear();
 	for (int i = 0; i < lex.size(); i++)
@@ -244,8 +325,8 @@ bool ParseTokens(vector<string> lex)
 	return true;
 }
 
-void ParseFunc() {
-	func.clear();
+vector<vector<Token> > ParseFunc(vector<Token> tokens) {
+	vector<vector<Token> > func;
 	vector<Token> el;
 	for (int i = 0; i < tokens.size(); i++)
 	{
@@ -257,6 +338,7 @@ void ParseFunc() {
 		func.push_back(el);
 		el.clear();
 	}
+	return func;
 }
 
 vector<IDD> GetIDD(vector<vector<Token> > func)
@@ -343,12 +425,270 @@ string GetValues(vector<int> var)
 // Glue
 bool CanGlue(Menterm x, Menterm y)
 {
-
+	int count = 0;
+	if (x.size() != y.size()) return false;
+	for (int i = 0; i < x.size(); i++)
+	{
+		if (x.v[i] != y.v[i])
+			count++;
+	}
+	if (count < 2)
+		return true;
+	else
+		return false;
 }
 
 Menterm Glue(Menterm x, Menterm y)
 {
+	if (CanGlue(x, y))
+	{
+		Menterm result;
+		int i = 0;
+		while (x.v[i] == y.v[i] && i < x.size()) result.v.push_back(x.v[i++]);
+		if (i < x.size())
+		{
+			result.v.push_back(-1);
+			i++;
+			while (x.v[i] == y.v[i] && i < x.size()) result.v.push_back(x.v[i++]);
+		}
+		return result;
+	}
+}
 
+void PrintTable(int table_no)
+{
+	Form1->Memo1->Lines->Add("");
+	Form1->Memo1->Lines->Add("GLUED:");
+	for (int i = 0; i < table_glue.g[table_no].size(); i++)
+	{
+		Form1->Memo1->Lines->Add((boost::lexical_cast<string>(i)).c_str());
+		for (int j = 0; j < table_glue.g[table_no][i].size(); j++)
+		{
+		   Form1->Memo1->Lines->Add(table_glue.g[table_no][i][j].str().c_str());
+		}
+	}
+	Form1->Memo1->Lines->Add("");
+}
+
+vector<Menterm> GetSimpleImplicants(vector<Menterm> SDNF)
+{
+	table_glue.AddTable();
+	for (int i = 0; i < table_amount + 1; i++)
+		table_glue.AddGroup(0);
+
+	for (int i = 0; i < table_glue.g[0].size(); i++)
+	{
+		for (int j = 0; j < SDNF.size(); j++)
+		{
+			if (i == SDNF[j].count())
+			{
+				SDNF[j].used = false;
+				table_glue.g[0][i].push_back(SDNF[j]);
+			}
+		}
+	}
+
+	table_glue.AddTable();
+	vector<Menterm> tmp;
+	int CurrTable = 0;
+	bool HasGlue = true;
+	// Цикл по таблицам....
+	while (HasGlue)
+	{
+		PrintTable(CurrTable);
+		HasGlue = false;
+		tmp.clear();
+		// Цикл по группам
+		Form1->Memo1->Lines->Add("-> Glue Operations");
+		for (int i = 0; i < table_glue.g[CurrTable].size() - 1; i++)
+		{
+			// Цикл по ментермам
+			for (int j = 0; j < table_glue.g[CurrTable][i].size(); j++)
+			{
+
+				for (int k = 0; k < table_glue.g[CurrTable][i + 1].size(); k++)
+				{
+					if (CanGlue(table_glue.g[CurrTable][i][j], table_glue.g[CurrTable][i + 1][k]))
+					{
+						table_glue.g[CurrTable][i + 1][k].used = true;
+						table_glue.g[CurrTable][i][j].used = true;
+						bool isAdded = false;
+						Menterm toAdd = Glue(table_glue.g[CurrTable][i][j], table_glue.g[CurrTable][i + 1][k]);
+						toAdd.used = false;
+						for (int h = 0; h < tmp.size(); h++)
+						{
+							if (tmp[h].str() == toAdd.str())
+								isAdded = true;
+						}
+						if (!isAdded)
+							tmp.push_back(toAdd);
+						Form1->Memo1->Lines->Add((table_glue.g[CurrTable][i][j].str() + " and " + table_glue.g[CurrTable][i + 1][k].str()).c_str());
+						HasGlue = true;
+					}
+				}
+			}
+		}
+		Form1->Memo1->Lines->Add("-> Glue Operations");
+
+		table_glue.AddTable();
+		CurrTable++;
+		table_glue.FillTable(CurrTable, tmp);
+	}
+
+	vector<Menterm> simple;
+
+	for (int i = 0; i < table_glue.g.size(); i++)
+	{
+		for (int j = 0; j < table_glue.g[i].size(); j++)
+		{
+			for (int k = 0; k < table_glue.g[i][j].size(); k++)
+			{
+				if (table_glue.g[i][j][k].used == false)
+					simple.push_back(table_glue.g[i][j][k]);
+			}
+		}
+	}
+	return simple;
+}
+
+bool HasDouble(vector<Menterm> v)
+{
+	for (int i = 0; i < v.size(); i++)
+	{
+		for (int j = 0; j < v[i].v.size(); j++)
+		{
+			if (v[i].v[j] == -1)
+				return true;
+		}
+	}
+	return false;
+}
+
+vector<Menterm> SplitMenterm(Menterm x)
+{
+	vector<Menterm> v;
+	int i = 0;
+
+	while (i < x.v.size() && x.v[i] != -1) i++;
+	if (i < x.v.size())
+	{
+		x.v[i] = 0;
+		v.push_back(Menterm(x.v));
+		x.v[i] = 1;
+		v.push_back(Menterm(x.v));
+	} else {
+		v.push_back(Menterm(x.v));
+		v[0].used = false;
+		return v;
+	}
+	return v;
+}
+
+bool MentermEqual(Menterm x, Menterm y)
+{
+	for (int i = 0; i < x.v.size(); i++)
+	{
+		if (x.v[i] != y.v[i])
+			return false;
+	}
+	return true;
+}
+
+void DeleteDouble(vector<Menterm> & v)
+{
+	for (int i = 0; i < v.size() - 1; i++)
+	{
+		for (int j = i + 1; j < v.size(); j++)
+		{
+			if (MentermEqual(v[i], v[j]))
+			{
+				v.erase(v.begin() + j);
+			}
+		}
+	}
+}
+
+vector<Menterm> GetSMenterms(vector<Menterm> v)
+{
+	while (HasDouble(v))
+	{
+		for (int i = 0; i < v.size(); i++)
+		{
+			for (int j = 0; j < v[i].v.size(); j++)
+			{
+				if (v[i].v[j] == -1)
+				{
+					vector<Menterm> x = SplitMenterm(v[i]);
+					v.erase(v.begin() + i);
+					for (int i = 0; i < x.size(); i++)
+					{
+						v.push_back(x[i].v);
+					}
+				}
+			}
+		}
+	}
+	DeleteDouble(v);
+	return v;
+}
+
+bool EqualSMenterms(vector<Menterm> MSet, vector<Menterm> simple)
+{
+	vector<Menterm> m = GetSMenterms(MSet);
+	vector<Menterm> s = GetSMenterms(simple);
+	for (int i = 0; i < s.size(); i++)
+	{
+		bool Has = false;
+		for (int j = 0; j < m.size(); j++)
+		{
+			if (m[j].str() == s[i].str())
+				Has = true;
+		}
+		if (!Has) return false;
+	}
+	return true;
+}
+
+vector<vector<Menterm> > GetMentermSets(vector<vector<int> > sets, vector<Menterm> simple)
+{
+	vector<vector<Menterm> > v;
+	for (int i = 0; i < sets.size(); i++)
+	{
+		vector<Menterm> m;
+		for (int j = 0; j < sets[i].size(); j++)
+		{
+			m.push_back(simple[sets[i][j]]);
+		}
+		v.push_back(m);
+	}
+	return v;
+}
+
+vector<vector<Menterm> > GetMentermResult(vector<vector<Menterm> > MSets, vector<Menterm> simple)
+{
+	vector<vector<Menterm> > tmp;
+	vector<vector<Menterm> > res;
+	for (int i = 0; i < MSets.size(); i++)
+	{
+		if (EqualSMenterms(MSets[i], simple))
+		{
+			tmp.push_back(MSets[i]);
+		}
+	}
+	int min = 10000;
+	for (int i = 0; i < tmp.size(); i++)
+	{
+		if (tmp[i].size() < min)
+			min = tmp[i].size();
+	}
+
+	for (int i = 0; i < tmp.size(); i++)
+	{
+		if (tmp[i].size() == min)
+			res.push_back(tmp[i]);
+	}
+
+	return res;
 }
 
 //---------------------------------------------------------------------------
@@ -359,59 +699,31 @@ __fastcall TForm1::TForm1(TComponent* Owner)
 //---------------------------------------------------------------------------
 void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 {
+	vector<Token> tokens;
+	vector<Menterm> SDNF;
+
 	Memo1->Clear();
-	SDNF.clear();
-	func.clear();
-	tokens.clear();
 	table.clear();
-	if (!ParseTokens(GetStrLexems(UnicodeToString(LabeledEditFunc->Text))))
+	table_glue.g.clear();
+
+	if (!ParseTokens(GetStrLexems(UnicodeToString(LabeledEditFunc->Text)), tokens))
 	{
 		Memo1->Lines->Add("Parse error.");
+		return;
 	}
-	ParseFunc();
-	/*for (int i = 0; i < tokens.size(); i++)
-	{
-		Memo1->Lines->Add("-> Token: ");
-		Memo1->Lines->Add((TokenToStr(tokens[i].lex)).c_str());
-		Memo1->Lines->Add((tokens[i].str).c_str());
-		if (tokens[i].inv)
-			Memo1->Lines->Add("-> ID inversed");
-		Memo1->Lines->Add("");
-	}
-	Memo1->Lines->Add(">>>>>");
-	Memo1->Lines->Add("");
+	vector<vector<Token> > func = ParseFunc(tokens);
+	table_amount = GetIDD(func).size();
 
-
-	for (int i = 0; i < func.size(); i++)
-	{
-		for (int j = 0; j < func[i].size(); j++)
-		{
-			Memo1->Lines->Add(func[i][j].str.c_str());
-		}
-	}
-    	for (int i = 0; i < val.size(); i++)
-	{
-		Memo1->Lines->Add(val[i].id.c_str());
-		if (val[i].inv)
-			Memo1->Lines->Add("INV");
-	}
-	*/
-
-
-	vector<int> vs;
-	vector<IDD> val = GetIDD(func);
-
-	table_amount = val.size();
 	for (int i = 0; i < pow(2.0, table_amount); i++) {
-		val = GetIDD(func);
+		vector<int> vs;
+		vector<IDD> val = GetIDD(func);
 		vs = convert(i, table_amount);
 		SetValues(val, vs);
 		table.push_back(GetValue(func, val));
-    }
-
+	}
 
 	StringGrid1->RowCount = pow(2.0, table_amount) + 1;
-	StringGrid1->Cells[0][0] = (GetVars(val).c_str());
+	StringGrid1->Cells[0][0] = (GetVars(GetIDD(func)).c_str());
 	StringGrid1->Cells[1][0] = ("Value");
 	for (int i = 0; i < table.size(); i++) {
 		StringGrid1->Cells[0][i + 1] = ((Menterm(i, table_amount).str().c_str()));
@@ -431,38 +743,50 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 			SDNF.push_back(Menterm(i, table_amount));
 	}
 
-
-	for (int i = 0; i < SDNF.size(); i++)
+	vector<Menterm> simple = GetSimpleImplicants(SDNF);
+	Memo1->Lines->Add("");
+	Memo1->Lines->Add("Simple implicants: ");
+	for (int i = 0; i < simple.size(); i++)
 	{
-		Memo1->Lines->Add((SDNF[i].Fstr(GetIDD(func)) + " | " + boost::lexical_cast<string>(SDNF[i].count())).c_str());
-		if (i < SDNF.size() - 1) Memo1->Lines->Add("+");
+		Memo1->Lines->Add(simple[i].str().c_str());
 	}
-	Memo1->Lines->Add(">>>");
 
-	vector<Menterm> tmp_group;
-	for (int i = 0; i < table_amount + 1; i++)
-		Group.push_back(tmp_group);
+	Memo1->Lines->Add("");
+	Memo1->Lines->Add("Maybe sets");
 
-	for (int i = 0; i < Group.size(); i++)
+	vector<vector<Menterm> > MSets = GetMentermSets(GetSets(simple.size()), simple);
+	for (int i = 0; i < MSets.size(); i++)
 	{
-		for (int j = 0; j < SDNF.size(); j++)
+		string s;
+		for (int j = 0; j < MSets[i].size(); j++)
 		{
-			if (i == SDNF[j].count())
-			{
-				Group[i].push_back(SDNF[j]);
-			}
+			s += MSets[i][j].str() + " ";
 		}
+		Memo1->Lines->Add(s.c_str());
+		s = "";
+	}
+	Memo1->Lines->Add("");
+	Memo1->Lines->Add("Need to have");
+	vector<Menterm> SMenterms = GetSMenterms(simple);
+	for (int i = 0; i < SMenterms.size(); i++)
+	{
+		Memo1->Lines->Add(SMenterms[i].str().c_str());
 	}
 
-	for (int i = 0; i < Group.size(); i++)
+	Memo1->Lines->Add("");
+	Memo1->Lines->Add("Answer");
+	vector<vector<Menterm> > result = GetMentermResult(MSets, simple);
+	for (int i = 0; i < result.size(); i++)
 	{
-		Memo1->Lines->Add((boost::lexical_cast<string>(i)).c_str());
-		for (int j = 0; j < Group[i].size(); j++)
+		string s;
+		for (int j = 0; j < result[i].size(); j++)
 		{
-		   Memo1->Lines->Add(Group[i][j].str().c_str());
-
-        }
-    }
+			s += result[i][j].str();
+			if (j < result[i].size() - 1) s += " + ";
+		}
+		Memo1->Lines->Add(s.c_str());
+		s = "";
+	}
 }
 //---------------------------------------------------------------------------
 

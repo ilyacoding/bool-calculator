@@ -25,7 +25,7 @@ object Form1: TForm1
     EditLabel.Height = 13
     EditLabel.Caption = 'Bool function'
     TabOrder = 0
-    Text = '~X*Y*~Z*~T+X*~Y*~Z*~T+X*~Y*Z*~T+X*~Y*Z*T+X*Y*~Z*~T+X*Y*Z*T'
+    Text = '~A*~B*~C*D+~A*~B*C*D+~A*B*~C*D+~A*B*C*D+A*B*C*~D+A*B*C*D'
   end
   object ButtonCalc: TButton
     Left = 606
@@ -38,23 +38,26 @@ object Form1: TForm1
     OnClick = ButtonCalcClick
   end
   object Memo1: TMemo
-    Left = 223
+    Left = 256
     Top = 51
-    Width = 146
+    Width = 425
     Height = 429
+    ScrollBars = ssVertical
     TabOrder = 2
   end
   object StringGrid1: TStringGrid
     Left = 8
     Top = 51
-    Width = 209
+    Width = 242
     Height = 429
     ColCount = 2
-    DefaultColWidth = 80
+    DefaultColWidth = 94
     DefaultRowHeight = 20
     FixedCols = 0
     RowCount = 1
     FixedRows = 0
     TabOrder = 3
+    RowHeights = (
+      20)
   end
 end
