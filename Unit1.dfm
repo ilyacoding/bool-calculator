@@ -23,16 +23,12 @@ object Form1: TForm1
     Height = 13
     Caption = 'Result'
   end
-  object LabeledEditFunc: TLabeledEdit
+  object Label2: TLabel
     Left = 8
-    Top = 24
-    Width = 592
-    Height = 21
-    EditLabel.Width = 62
-    EditLabel.Height = 13
-    EditLabel.Caption = 'Bool function'
-    TabOrder = 0
-    Text = '~A*~B*~C*D+~A*~B*C*D+~A*B*~C*D+~A*B*C*D+A*B*C*~D+A*B*C*D'
+    Top = 7
+    Width = 62
+    Height = 13
+    Caption = 'Bool function'
   end
   object ButtonCalc: TButton
     Left = 606
@@ -41,29 +37,29 @@ object Form1: TForm1
     Height = 25
     Anchors = [akTop, akRight]
     Caption = 'Let'#39's Go!'
-    TabOrder = 1
+    TabOrder = 0
     OnClick = ButtonCalcClick
   end
   object Memo1: TMemo
     Left = 256
-    Top = 51
+    Top = 53
     Width = 425
-    Height = 310
+    Height = 308
     ScrollBars = ssVertical
-    TabOrder = 2
+    TabOrder = 1
   end
   object StringGrid1: TStringGrid
     Left = 8
-    Top = 51
+    Top = 53
     Width = 242
-    Height = 429
+    Height = 427
     ColCount = 2
     DefaultColWidth = 94
     DefaultRowHeight = 20
     FixedCols = 0
     RowCount = 1
     FixedRows = 0
-    TabOrder = 3
+    TabOrder = 2
     ColWidths = (
       94
       94)
@@ -76,6 +72,15 @@ object Form1: TForm1
     Width = 425
     Height = 94
     ScrollBars = ssVertical
+    TabOrder = 3
+  end
+  object Edit1: TEdit
+    Left = 8
+    Top = 26
+    Width = 592
+    Height = 21
     TabOrder = 4
+    Text = '~A*~B*~C*D+~A*~B*C*D+~A*B*~C*D+~A*B*C*D+A*B*C*~D+A*B*C*D'
+    OnKeyPress = Edit1KeyPress
   end
 end

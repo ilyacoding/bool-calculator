@@ -73,7 +73,7 @@ string ToStr(T Data)
 }
 
 enum Lexem {
-	ID, PLUS, MUL, INVERSE
+	ID, PLUS, MUL, INVERSE, OPEN_BRACKET, CLOSE_BRACKET
 };
 
 class Token {
@@ -197,8 +197,6 @@ string Menterm::FPlusstr(vector<IDD> vars)
 			s += vars[i].id;
 		else if (v[i] == 0)
 			s += "~" + vars[i].id;
-		//if (i < v.size() - 1 && v[i+1] != -1 && v[i] != -1)
-		//	s += "*";
 	}
 
 	return s;
@@ -255,6 +253,12 @@ string TokenToStr(Lexem lex)
 	case INVERSE:
 		return "INVERSE";
 		break;
+	case OPEN_BRACKET:
+		return "OPEN_BRACKET";
+		break;
+	case CLOSE_BRACKET:
+		return "CLOSE_BRACKET";
+		break;
 	default:
 		return "";
 		break;
@@ -296,12 +300,18 @@ bool ParseTokens(vector<string> lex, vector<Token> & tokens)
 			tokens.push_back(Token(lex[i], MUL));
 		else if (lex[i] == "~")
 			tokens.push_back(Token(lex[i], INVERSE));
+		else if (lex[i] == "(")
+			tokens.push_back(Token(lex[i], OPEN_BRACKET));
+		else if (lex[i] == ")")
+			tokens.push_back(Token(lex[i], CLOSE_BRACKET));
 		else if (isValidVar(lex[i]))
 			tokens.push_back(Token(lex[i], ID));
 		else {
 			return false;
 		}
 	}
+
+	if (tokens.size() < 3) return false;
 
 	for (int i = 0; i < tokens.size(); i++)
 	{
@@ -315,17 +325,31 @@ bool ParseTokens(vector<string> lex, vector<Token> & tokens)
 					tokens.erase(tokens.begin() + i);
 				} else {
 					return false;
-                }
+				}
 			} else {
 				return false;
-            }
-        }
-    }
+			}
+		}
+	}
+
+	if (tokens.size() < 3) return false;
+
+	for (int i = 1; i < tokens.size(); i++)
+	{
+
+		if (tokens[i].lex == PLUS || tokens[i].lex == MUL)
+		{
+			if (!((tokens[i - 1].lex == ID || tokens[i - 1].lex == CLOSE_BRACKET || tokens[i - 1].lex == OPEN_BRACKET) && (tokens[i + 1].lex == ID || tokens[i + 1].lex == CLOSE_BRACKET || tokens[i + 1].lex == OPEN_BRACKET)))
+				return false;
+		}
+	}
+
+	//for ()
 
 	return true;
 }
 
-vector<vector<Token> > ParseFunc(vector<Token> tokens) {
+/*vector<vector<Token> > ParseFunc(vector<Token> tokens) {
 	vector<vector<Token> > func;
 	vector<Token> el;
 	for (int i = 0; i < tokens.size(); i++)
@@ -339,9 +363,27 @@ vector<vector<Token> > ParseFunc(vector<Token> tokens) {
 		el.clear();
 	}
 	return func;
+} */
+
+vector<IDD> GetTIDD(vector<Token> tok)
+{
+	vector<IDD> v;
+	for (int i = 0; i < tok.size(); i++)
+	{
+		if (tok[i].lex != ID) continue;
+		bool added = false;
+		for (int k = 0; k < v.size(); k++)
+			if (v[k].id == tok[i].str)
+				added = true;
+		if (!added)
+		{
+			v.push_back(IDD(tok[i].str, tok[i].inv, false));
+		}
+	}
+	return v;
 }
 
-vector<IDD> GetIDD(vector<vector<Token> > func)
+/*vector<IDD> aGetIDD(vector<vector<Token> > func)
 {
 	vector<IDD> v;
 	for (int i = 0; i < func.size(); i++)
@@ -359,9 +401,128 @@ vector<IDD> GetIDD(vector<vector<Token> > func)
 		}
 	}
 	return v;
+}   */
+
+int StackPriority(Lexem Token)
+{
+	if (isalpha(Token)) return 8;
+	switch (Token) {
+	case OPEN_BRACKET:
+		return 0;
+		break;
+	case PLUS:
+		return 2;
+		break;
+	case MUL:
+		return 4;
+		break;
+	default:
+		return 10;
+		break;
+	}
 }
 
-int GetValue(vector<vector<Token> > func, vector<IDD> val)
+int CompPriority(Lexem Token)
+{
+	if (isalpha(Token)) return 7;
+	switch (Token) {
+	case CLOSE_BRACKET:
+		return 0;
+		break;
+	case PLUS:
+		return 1;
+		break;
+	case MUL:
+		return 3;
+		break;
+	case OPEN_BRACKET:
+		return 9;
+		break;
+	default:
+		return 10;
+		break;
+	}
+}
+
+vector<Token> calc(vector<Token> Input)
+{
+	vector<Token> pStack;
+	Token Tok(PLUS);
+	int i = 0;
+	vector<Token> Out;
+
+	while (i < Input.size())
+	{
+		if (!(pStack.size()) || (CompPriority(Input[i].lex) > StackPriority(pStack.back().lex)))
+		{
+			if (Input[i].lex != CLOSE_BRACKET)
+				pStack.push_back(Input[i]);
+			i++;
+		} else {
+			Tok = pStack.back();
+			pStack.pop_back();
+			if (Tok.lex != OPEN_BRACKET) {
+				Out.push_back(Tok);
+			}
+			else
+				i++;
+		}
+	}
+
+	while (!pStack.empty()) {
+		Tok = pStack.back();
+		pStack.pop_back();
+		if (Tok.lex != OPEN_BRACKET)
+			Out.push_back(Tok);
+	}
+	return Out;
+}
+
+int GetTValue(vector<Token> tk, vector<IDD> val)
+{
+	// б ног
+	tk = calc(tk);
+	for (int i = 0; i < tk.size(); i++)
+	{
+		for (int j = 0; j < val.size(); j++)
+		{
+			if (val[j].id == tk[i].str)
+			{
+				if (tk[i].inv)
+				{
+					tk[i].str = boost::lexical_cast<string>(1 - val[j].value);
+					tk[i].inv = false;
+				} else {
+					tk[i].str = boost::lexical_cast<string>(val[j].value);
+				}
+			}
+		}
+	}
+	int i = 0;
+	while (tk.size() > 1)
+	{
+		if (tk[i].lex == PLUS || tk[i].lex == MUL)
+		{
+			int tmp;
+			if (tk[i].lex == PLUS)
+				tmp = boost::lexical_cast<int>(tk[i - 2].str) + boost::lexical_cast<int>(tk[i - 1].str);
+			else
+				tmp = (int)boost::lexical_cast<int>(tk[i - 2].str)*(int)boost::lexical_cast<int>(tk[i - 1].str);
+
+			if (tmp > 1) tmp = 1;
+			tk[i].str = boost::lexical_cast<string>(tmp);
+			tk[i].lex = ID;
+			tk.erase(tk.begin() + i - 2);
+			tk.erase(tk.begin() + i - 2);
+			i -= 2;
+		} else {
+			i++;
+        }
+	}
+	return boost::lexical_cast<int>(tk[0].str);
+}
+
+/*int GetValue(vector<vector<Token> > func, vector<IDD> val)
 {
 	for (int i = 0; i < func.size(); i++)
 	{
@@ -396,7 +557,7 @@ int GetValue(vector<vector<Token> > func, vector<IDD> val)
 			return 1;
 	}
 	return 0;
-}
+} */
 
 void SetValues(vector<IDD> & value, vector<int> val)
 {
@@ -461,7 +622,7 @@ void PrintTable(int table_no)
 	Form1->Memo1->Lines->Add("GLUED:");
 	for (int i = 0; i < table_glue.g[table_no].size(); i++)
 	{
-		Form1->Memo1->Lines->Add((boost::lexical_cast<string>(i)).c_str());
+		Form1->Memo1->Lines->Add((boost::lexical_cast<string>(i) + ":").c_str());
 		for (int j = 0; j < table_glue.g[table_no][i].size(); j++)
 		{
 		   Form1->Memo1->Lines->Add(table_glue.g[table_no][i][j].str().c_str());
@@ -708,7 +869,7 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	table.clear();
 	table_glue.g.clear();
 
-	string str = UnicodeToString(LabeledEditFunc->Text);
+	string str = UnicodeToString(Edit1->Text);
 
 	str.erase(std::remove(str.begin(), str.end(), ' '), str.end());
 
@@ -717,19 +878,33 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		Memo1->Lines->Add("Parse error.");
 		return;
 	}
-	vector<vector<Token> > func = ParseFunc(tokens);
-	table_amount = GetIDD(func).size();
 
+	//vector<vector<Token> > func = ParseFunc(tokens);
+	table_amount = GetTIDD(tokens).size();
+
+	/*for(int i = 0; i < t.size(); i++)
+	{
+		Memo1->Lines->Add((t[i].str + " | " + TokenToStr(t[i].lex)).c_str());
+		if (t[i].inv)
+			Memo1->Lines->Add("INV");
+	}*/
+	//int x = GetTValue(tokens, val);
+
+
+	bool Add = false;
 	for (int i = 0; i < pow(2.0, table_amount); i++) {
 		vector<int> vs;
-		vector<IDD> val = GetIDD(func);
+		vector<IDD> val = GetTIDD(tokens);
 		vs = convert(i, table_amount);
 		SetValues(val, vs);
-		table.push_back(GetValue(func, val));
+		int t_value = GetTValue(tokens, val);
+		if (!t_value)
+			Add = true;
+		table.push_back(t_value);
 	}
 
 	StringGrid1->RowCount = pow(2.0, table_amount) + 1;
-	StringGrid1->Cells[0][0] = (GetVars(GetIDD(func)).c_str());
+	StringGrid1->Cells[0][0] = (GetVars(GetTIDD(tokens)).c_str());
 	StringGrid1->Cells[1][0] = ("Value");
 	for (int i = 0; i < table.size(); i++) {
 		StringGrid1->Cells[0][i + 1] = ((Menterm(i, table_amount).str().c_str()));
@@ -738,9 +913,15 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		} else {
 			StringGrid1->Cells[1][i + 1] = ("0");
 		}
-
 	}
 	// ENDED TABLE
+
+	if (!Add)
+	{
+		Memo2->Lines->Add("Answer (value)");
+		Memo2->Lines->Add("1");
+		return;
+	}
 
 	// Get SDNF
 	for (int i = 0; i < table.size(); i++)
@@ -750,6 +931,12 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	}
 
 	vector<Menterm> simple = GetSimpleImplicants(SDNF);
+	if (simple.size() == 0)
+	{
+		Memo2->Lines->Add("Answer (value)");
+		Memo2->Lines->Add("0");
+		return;
+	}
 	Memo1->Lines->Add("");
 	Memo1->Lines->Add("Simple implicants: ");
 	for (int i = 0; i < simple.size(); i++)
@@ -800,11 +987,31 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		string s;
 		for (int j = 0; j < result[i].size(); j++)
 		{
-			s += result[i][j].FPlusstr(GetIDD(func));
+			s += result[i][j].FPlusstr(GetTIDD(tokens));
 			if (j < result[i].size() - 1) s += " + ";
 		}
-		Memo2->Lines->Add(s.c_str());
+		if (s.size() > 0)
+		{
+			Memo2->Lines->Add(s.c_str());
+		}
 		s = "";
+	}
+}
+
+//---------------------------------------------------------------------------
+
+
+void __fastcall TForm1::Edit1KeyPress(TObject *Sender, System::WideChar &Key)
+{
+	if (Key >= 'a' && Key <= 'z')
+	{
+		Key += ('A' - 'a');
+    }
+	if ((Key >= 'A' && Key <= 'Z') || (Key >= '0' && Key <= '9') || (Key == '*') || (Key == '+') || (Key == '~') || (Key == '(') || (Key == ')') || (Key == 8))
+	{
+		return;
+	} else {
+		Key = 0;
 	}
 }
 //---------------------------------------------------------------------------
