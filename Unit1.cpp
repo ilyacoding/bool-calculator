@@ -178,7 +178,7 @@ int Menterm::count()
 string Menterm::Fstr(vector<IDD> vars)
 {
 	string s = "";
-	for (int i = 0; i < v.size(); i++)
+	for (int i = 0; i < vars.size(); i++)
 		if (v[i] == 1)
 			s += vars[i].id;
 		else if (v[i] == 0)
@@ -191,14 +191,14 @@ string Menterm::Fstr(vector<IDD> vars)
 string Menterm::FPlusstr(vector<IDD> vars)
 {
 	string s = "";
-	for (int i = 0; i < v.size(); i++)
+	for (int i = 0; i < vars.size(); i++)
 	{
 		if (v[i] == 1)
-			s += vars[i].id;
+			s += vars[i].id + "*";
 		else if (v[i] == 0)
-			s += "~" + vars[i].id;
+			s += "~" + vars[i].id + "*";
 	}
-
+    s.erase(s.begin() + s.size() - 1);
 	return s;
 }
 
@@ -206,7 +206,6 @@ int Menterm::size()
 {
 	return v.size();
 }
-
 
 vector<int> table;
 
@@ -891,15 +890,18 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	//int x = GetTValue(tokens, val);
 
 
-	bool Add = false;
+	bool HasOne = false;
+	bool HasZero = false;
 	for (int i = 0; i < pow(2.0, table_amount); i++) {
 		vector<int> vs;
 		vector<IDD> val = GetTIDD(tokens);
 		vs = convert(i, table_amount);
 		SetValues(val, vs);
 		int t_value = GetTValue(tokens, val);
-		if (!t_value)
-			Add = true;
+		if (t_value)
+			HasOne = true;
+		else
+			HasZero = true;
 		table.push_back(t_value);
 	}
 
@@ -916,10 +918,16 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	}
 	// ENDED TABLE
 
-	if (!Add)
+	if (!HasZero)
 	{
 		Memo2->Lines->Add("Answer (value)");
 		Memo2->Lines->Add("1");
+		return;
+	}
+	if (!HasOne)
+	{
+		Memo2->Lines->Add("Answer (value)");
+		Memo2->Lines->Add("0");
 		return;
 	}
 
@@ -931,12 +939,7 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	}
 
 	vector<Menterm> simple = GetSimpleImplicants(SDNF);
-	if (simple.size() == 0)
-	{
-		Memo2->Lines->Add("Answer (value)");
-		Memo2->Lines->Add("0");
-		return;
-	}
+
 	Memo1->Lines->Add("");
 	Memo1->Lines->Add("Simple implicants: ");
 	for (int i = 0; i < simple.size(); i++)
@@ -999,7 +1002,6 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 }
 
 //---------------------------------------------------------------------------
-
 
 void __fastcall TForm1::Edit1KeyPress(TObject *Sender, System::WideChar &Key)
 {
