@@ -20,6 +20,9 @@ __published:	// IDE-managed Components
 	TLabel *Label1;
 	TEdit *Edit1;
 	TLabel *Label2;
+	TCheckBox *CheckBox1;
+	TLabel *Label3;
+	TLabel *Label4;
 	void __fastcall ButtonCalcClick(TObject *Sender);
 	void __fastcall Edit1KeyPress(TObject *Sender, System::WideChar &Key);
 

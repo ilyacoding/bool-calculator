@@ -37,12 +37,6 @@ void comb(int m, int n, unsigned __int32 *c, vector<vector<int> > & res)
 		for (i = n; i--;)
 			v.push_back(c[i] - 1);
 		res.push_back(v);
-			//printf("%d%c", c[i], i ? ' ' : '\n');
-
-		/* this check is not strictly necessary, but if m is not close to n,
-		it makes the whole thing quite a bit faster */
-		//if (c[i]++ < m) continue;
-
 		for (i = 0; c[i] >= m - i;) if (++i >= n) return;
 		for (c[i]++; i; i--) c[i - 1] = c[i] + 1;
 	}
@@ -348,22 +342,6 @@ bool ParseTokens(vector<string> lex, vector<Token> & tokens)
 	return true;
 }
 
-/*vector<vector<Token> > ParseFunc(vector<Token> tokens) {
-	vector<vector<Token> > func;
-	vector<Token> el;
-	for (int i = 0; i < tokens.size(); i++)
-	{
-		while (tokens[i].lex != PLUS && i < tokens.size())
-		if (tokens[i].lex != MUL)
-			el.push_back(tokens[i++]);
-		else
-			i++;
-		func.push_back(el);
-		el.clear();
-	}
-	return func;
-} */
-
 vector<IDD> GetTIDD(vector<Token> tok)
 {
 	vector<IDD> v;
@@ -381,26 +359,6 @@ vector<IDD> GetTIDD(vector<Token> tok)
 	}
 	return v;
 }
-
-/*vector<IDD> aGetIDD(vector<vector<Token> > func)
-{
-	vector<IDD> v;
-	for (int i = 0; i < func.size(); i++)
-	{
-		for (int j = 0; j < func[i].size(); j++)
-		{
-			bool added = false;
-			for (int k = 0; k < v.size(); k++)
-				if (v[k].id == func[i][j].str)
-					added = true;
-			if (!added)
-			{
-				v.push_back(IDD(func[i][j].str, func[i][j].inv, false));
-			}
-		}
-	}
-	return v;
-}   */
 
 int StackPriority(Lexem Token)
 {
@@ -521,43 +479,6 @@ int GetTValue(vector<Token> tk, vector<IDD> val)
 	return boost::lexical_cast<int>(tk[0].str);
 }
 
-/*int GetValue(vector<vector<Token> > func, vector<IDD> val)
-{
-	for (int i = 0; i < func.size(); i++)
-	{
-		for (int j = 0; j < func[i].size(); j++)
-		{
-			int value;
-			for (int k = 0; k < val.size(); k++)
-				if (func[i][j].str == val[k].id)
-				{
-					if (func[i][j].inv)
-						value = 1 - val[k].value;
-					else
-						value = val[k].value;
-					func[i][j].inv = false;
-				}
-			if (value)
-				func[i][j].str = "1";
-			else
-				func[i][j].str = "0";
-		}
-	}
-	for (int i = 0; i < func.size(); i++)
-	{
-		bool isOne = true;
-		for (int j = 0; j < func[i].size(); j++)
-		{
-			if (func[i][j].str == "0") {
-				isOne = false;
-			}
-		}
-		if (isOne)
-			return 1;
-	}
-	return 0;
-} */
-
 void SetValues(vector<IDD> & value, vector<int> val)
 {
 	for (int i = 0; i < val.size(); i++)
@@ -618,7 +539,7 @@ Menterm Glue(Menterm x, Menterm y)
 void PrintTable(int table_no)
 {
 	Form1->Memo1->Lines->Add("");
-	Form1->Memo1->Lines->Add("GLUED:");
+	Form1->Memo1->Lines->Add("Таблица:");
 	for (int i = 0; i < table_glue.g[table_no].size(); i++)
 	{
 		Form1->Memo1->Lines->Add((boost::lexical_cast<string>(i) + ":").c_str());
@@ -659,7 +580,8 @@ vector<Menterm> GetSimpleImplicants(vector<Menterm> SDNF)
 		HasGlue = false;
 		tmp.clear();
 		// Цикл по группам
-		Form1->Memo1->Lines->Add("-> Glue Operations");
+		if (Form1->CheckBox1->Checked)
+			Form1->Memo1->Lines->Add("-> Операции склеивания");
 		for (int i = 0; i < table_glue.g[CurrTable].size() - 1; i++)
 		{
 			// Цикл по ментермам
@@ -682,13 +604,15 @@ vector<Menterm> GetSimpleImplicants(vector<Menterm> SDNF)
 						}
 						if (!isAdded)
 							tmp.push_back(toAdd);
-						Form1->Memo1->Lines->Add((table_glue.g[CurrTable][i][j].str() + " and " + table_glue.g[CurrTable][i + 1][k].str()).c_str());
+						if (Form1->CheckBox1->Checked)
+							Form1->Memo1->Lines->Add((table_glue.g[CurrTable][i][j].str() + " и " + table_glue.g[CurrTable][i + 1][k].str()).c_str());
 						HasGlue = true;
 					}
 				}
 			}
 		}
-		Form1->Memo1->Lines->Add("-> Glue Operations");
+		if (Form1->CheckBox1->Checked)
+			Form1->Memo1->Lines->Add("-> Операции склеивания");
 
 		table_glue.AddTable();
 		CurrTable++;
@@ -860,6 +784,7 @@ __fastcall TForm1::TForm1(TComponent* Owner)
 //---------------------------------------------------------------------------
 void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 {
+
 	vector<Token> tokens;
 	vector<Menterm> SDNF;
 
@@ -874,20 +799,25 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 
 	if (!ParseTokens(GetStrLexems(str), tokens))
 	{
-		Memo1->Lines->Add("Parse error.");
+		Memo1->Lines->Add("Ошибка. Неверное выражение.");
+		Memo1->Visible = true;
+		Memo2->Visible = false;
+		StringGrid1->Visible = false;
+		Label1->Visible = false;
+		Label3->Visible = false;
+		Label4->Visible = false;
 		return;
-	}
+	} else {
+		Memo1->Visible = true;
+		Memo2->Visible = true;
+		StringGrid1->Visible = true;
+		Label1->Visible = true;
+		Label2->Visible = true;
+		Label3->Visible = true;
+		Label4->Visible = true;
+    }
 
-	//vector<vector<Token> > func = ParseFunc(tokens);
 	table_amount = GetTIDD(tokens).size();
-
-	/*for(int i = 0; i < t.size(); i++)
-	{
-		Memo1->Lines->Add((t[i].str + " | " + TokenToStr(t[i].lex)).c_str());
-		if (t[i].inv)
-			Memo1->Lines->Add("INV");
-	}*/
-	//int x = GetTValue(tokens, val);
 
 
 	bool HasOne = false;
@@ -905,28 +835,51 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		table.push_back(t_value);
 	}
 
+	vector<IDD> vars_col = GetTIDD(tokens);
+
 	StringGrid1->RowCount = pow(2.0, table_amount) + 1;
-	StringGrid1->Cells[0][0] = (GetVars(GetTIDD(tokens)).c_str());
-	StringGrid1->Cells[1][0] = ("Value");
+	StringGrid1->ColCount = vars_col.size() + 1;
+	StringGrid1->FixedRows = 1;
+
+	int MaxVarLen = 0;
+
+	for (int i = 0; i < vars_col.size(); i++)
+	{
+		StringGrid1->Cells[i][0] = (vars_col[i].id.c_str());
+		if (MaxVarLen < vars_col[i].id.length())
+			MaxVarLen = vars_col[i].id.length();
+	}
+	if (MaxVarLen > 7)
+		StringGrid1->DefaultColWidth = 70 + (MaxVarLen - 7) * 8;
+	else
+		StringGrid1->DefaultColWidth = 70;
+
+	//StringGrid1->Cells[0][0] = (GetVars(GetTIDD(tokens)).c_str());
+	StringGrid1->Cells[vars_col.size()][0] = ("Значение");
 	for (int i = 0; i < table.size(); i++) {
-		StringGrid1->Cells[0][i + 1] = ((Menterm(i, table_amount).str().c_str()));
+		Menterm x = Menterm(i, table_amount);
+		for (int j = 0; j < vars_col.size(); j++)
+		{
+			StringGrid1->Cells[j][i + 1] = ((boost::lexical_cast<string>(x.v[j]).c_str()));
+        }
+
 		if (table[i]) {
-			StringGrid1->Cells[1][i + 1] = ("1");
+			StringGrid1->Cells[vars_col.size()][i + 1] = ("1");
 		} else {
-			StringGrid1->Cells[1][i + 1] = ("0");
+			StringGrid1->Cells[vars_col.size()][i + 1] = ("0");
 		}
 	}
 	// ENDED TABLE
 
 	if (!HasZero)
 	{
-		Memo2->Lines->Add("Answer (value)");
+		Memo2->Lines->Add("Ответ (значение)");
 		Memo2->Lines->Add("1");
 		return;
 	}
 	if (!HasOne)
 	{
-		Memo2->Lines->Add("Answer (value)");
+		Memo2->Lines->Add("Ответ (значение)");
 		Memo2->Lines->Add("0");
 		return;
 	}
@@ -938,19 +891,26 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 			SDNF.push_back(Menterm(i, table_amount));
 	}
 
+
+	Form1->Memo1->Lines->Add("Таблицы групп конститует единицы: ");
+
 	vector<Menterm> simple = GetSimpleImplicants(SDNF);
 
 	Memo1->Lines->Add("");
-	Memo1->Lines->Add("Simple implicants: ");
+	Memo1->Lines->Add("Простые импликанты: ");
 	for (int i = 0; i < simple.size(); i++)
 	{
 		Memo1->Lines->Add(simple[i].str().c_str());
 	}
 
-	Memo1->Lines->Add("");
-	Memo1->Lines->Add("Maybe sets");
-
 	vector<vector<Menterm> > MSets = GetMentermSets(GetSets(simple.size()), simple);
+
+	if (Form1->CheckBox1->Checked)
+	{
+		Memo1->Lines->Add("");
+		Memo1->Lines->Add("Возможные наборы простых импликант: ");
+
+
 	for (int i = 0; i < MSets.size(); i++)
 	{
 		string s;
@@ -961,15 +921,16 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 		Memo1->Lines->Add(s.c_str());
 		s = "";
 	}
+	}
 	Memo1->Lines->Add("");
-	Memo1->Lines->Add("Need to have");
+	Memo1->Lines->Add("Конституенты единицы: ");
 	vector<Menterm> SMenterms = GetSMenterms(simple);
 	for (int i = 0; i < SMenterms.size(); i++)
 	{
 		Memo1->Lines->Add(SMenterms[i].str().c_str());
 	}
 
-	Memo2->Lines->Add("Answer (Implicants)");
+	Memo2->Lines->Add("Ответ (Простые импликанты)");
 	vector<vector<Menterm> > result = GetMentermResult(MSets, simple);
 	for (int i = 0; i < result.size(); i++)
 	{
@@ -984,7 +945,7 @@ void __fastcall TForm1::ButtonCalcClick(TObject *Sender)
 	}
 
 	Memo2->Lines->Add("");
-	Memo2->Lines->Add("Answer (Minimized function)");
+	Memo2->Lines->Add("Ответ (минимальная ДНФ)");
 	for (int i = 0; i < result.size(); i++)
 	{
 		string s;
@@ -1008,7 +969,7 @@ void __fastcall TForm1::Edit1KeyPress(TObject *Sender, System::WideChar &Key)
 	if (Key >= 'a' && Key <= 'z')
 	{
 		Key += ('A' - 'a');
-    }
+	}
 	if ((Key >= 'A' && Key <= 'Z') || (Key >= '0' && Key <= '9') || (Key == '*') || (Key == '+') || (Key == '~') || (Key == '(') || (Key == ')') || (Key == 8))
 	{
 		return;
